@@ -1,0 +1,75 @@
+name: Build TOK Full Android App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "full-app/**"
+      - ".github/workflows/build-full-app.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Restore original TOK app sources
+        working-directory: full-app
+        shell: bash
+        run: |
+          cat source/parts/part00.b64 source/parts/part01a.b64 source/parts/chunk{03..16}.b64 > /tmp/tok-source.b64
+          base64 --decode /tmp/tok-source.b64 > source/TOK-app-source.zip
+          unzip -t source/TOK-app-source.zip
+          unzip -oq source/TOK-app-source.zip -d web
+          test -f web/src/components/tok/app.tsx
+          test -f web/src/components/tok/today.tsx
+          test -f web/src/game/model.ts
+          test -f web/src/game/store.ts
+          test -f web/src/styles.css
+
+      - name: Build original TOK web interface
+        working-directory: full-app/web
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Package TOK into Android assets
+        run: |
+          mkdir -p full-app/app/src/main/assets/www
+          cp -R full-app/web/dist/. full-app/app/src/main/assets/www/
+
+      - name: Build full Android APK
+        working-directory: full-app
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload full app APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TOK-Full-App-debug-apk
+          path: full-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
