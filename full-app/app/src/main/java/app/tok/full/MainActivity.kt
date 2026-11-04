@@ -22,7 +22,7 @@ class MainActivity : Activity() {
         window.decorView.systemUiVisibility = 0
 
         val assetLoader = WebViewAssetLoader.Builder()
-            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this, "www"))
+            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
 
         webView = WebView(this).apply {
@@ -47,7 +47,7 @@ class MainActivity : Activity() {
 
         setContentView(webView)
         if (savedInstanceState == null) {
-            webView.loadUrl("https://appassets.androidplatform.net/index.html")
+            webView.loadUrl("https://appassets.androidplatform.net/www/index.html")
         } else {
             webView.restoreState(savedInstanceState)
         }
